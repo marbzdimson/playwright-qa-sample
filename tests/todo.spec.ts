@@ -1,58 +1,58 @@
 import { test, expect } from '@playwright/test';
-import { TodoPage } from './todo.pages';
+import { TodoPage } from './todoPage';
 
-test.describe('Todo list', () => {
-  let todo: TodoPage;
-  let consoleErrors: string[];
+let todoPage: TodoPage;
+let errors: string[];
 
-  test.beforeEach(async ({ page }) => {
-    consoleErrors = [];
-    page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
-    todo = new TodoPage(page);
-    await todo.open();
+test.beforeEach(async ({ page }) => {
+  errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
   });
+  todoPage = new TodoPage(page);
+  await todoPage.goto();
+});
 
-  test.afterEach(() => {
-    // A page can look fine and still throw errors in the console.
-    expect(consoleErrors, 'console errors on the page').toEqual([]);
-  });
+// fail the test if anything was logged to the console as an error
+test.afterEach(() => {
+  expect(errors).toEqual([]);
+});
 
-  test('adds items and shows the right counter', async () => {
-    await todo.add('Reproduce the bug', 'Write the ticket');
-    await expect(todo.items).toHaveText(['Reproduce the bug', 'Write the ticket']);
-    await expect(todo.counter).toHaveText('2 items left');
-  });
+test('add 2 todos, counter says 2 items left', async () => {
+  await todoPage.addTodos('buy milk', 'pay electric bill');
+  await expect(todoPage.todos).toHaveText(['buy milk', 'pay electric bill']);
+  await expect(todoPage.count).toHaveText('2 items left');
+});
 
-  test('trims spaces and ignores an empty item', async () => {
-    await todo.add('   Retest the fix   ', '   ');
-    await expect(todo.items).toHaveCount(1);
-    await expect(todo.items.first()).toHaveText('Retest the fix');
-  });
+test('spaces are trimmed and a blank todo is not added', async () => {
+  await todoPage.addTodos('   walk the dog   ', '   ');
+  await expect(todoPage.todos).toHaveCount(1);
+  await expect(todoPage.todos.first()).toHaveText('walk the dog');
+});
 
-  test('completing an item updates the counter and the filters', async () => {
-    await todo.add('Reproduce the bug', 'Write the ticket');
-    await todo.complete('Reproduce the bug');
-    await expect(todo.counter).toHaveText('1 item left');
+test('mark one done, check active and completed filters', async () => {
+  await todoPage.addTodos('buy milk', 'pay electric bill');
+  await todoPage.markDone('buy milk');
+  await expect(todoPage.count).toHaveText('1 item left');
 
-    await todo.filter('Active');
-    await expect(todo.items).toHaveText(['Write the ticket']);
+  await todoPage.showOnly('Active');
+  await expect(todoPage.todos).toHaveText(['pay electric bill']);
 
-    await todo.filter('Completed');
-    await expect(todo.items).toHaveText(['Reproduce the bug']);
-  });
+  await todoPage.showOnly('Completed');
+  await expect(todoPage.todos).toHaveText(['buy milk']);
+});
 
-  test('items survive a page reload', async ({ page }) => {
-    await todo.add('Follow up with the reporter');
-    await page.reload();
-    await expect(todo.items).toHaveText(['Follow up with the reporter']);
-  });
+test('todos are still there after reload', async ({ page }) => {
+  await todoPage.addTodos('call the dentist');
+  await page.reload();
+  await expect(todoPage.todos).toHaveText(['call the dentist']);
+});
 
-  test('editing an item to empty removes it', async () => {
-    await todo.add('Temporary item');
-    await todo.item('Temporary item').dblclick();
-    const edit = todo.items.getByRole('textbox', { name: 'Edit' });
-    await edit.fill('');
-    await edit.press('Enter');
-    await expect(todo.items).toHaveCount(0);
-  });
+test('clearing the text while editing deletes the todo', async () => {
+  await todoPage.addTodos('delete me');
+  await todoPage.todo('delete me').dblclick();
+  const editBox = todoPage.todos.getByRole('textbox', { name: 'Edit' });
+  await editBox.fill('');
+  await editBox.press('Enter');
+  await expect(todoPage.todos).toHaveCount(0);
 });

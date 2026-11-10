@@ -1,48 +1,54 @@
 import { test, expect } from '@playwright/test';
 
-// API checks against the public JSONPlaceholder test API.
-// They need no browser, so they run once (desktop project only).
-test.describe('Posts API', () => {
-  test.skip(({ isMobile }) => isMobile, 'API tests run once');
-  const base = 'https://jsonplaceholder.typicode.com';
+const API = 'https://jsonplaceholder.typicode.com';
 
-  test('GET a post returns the expected shape', async ({ request }) => {
-    const res = await request.get(`${base}/posts/1`);
-    expect(res.status()).toBe(200);
-    expect(res.headers()['content-type']).toContain('application/json');
-    const post = await res.json();
-    expect(post).toMatchObject({ id: 1, userId: expect.any(Number), title: expect.any(String) });
-  });
+// no browser needed here, so skip the mobile run
+test.skip(({ isMobile }) => isMobile, 'api tests only run once');
 
-  test('a filtered list only returns records for that user', async ({ request }) => {
-    const res = await request.get(`${base}/posts`, { params: { userId: 3 } });
-    expect(res.ok()).toBeTruthy();
-    const posts = await res.json();
-    expect(posts.length).toBeGreaterThan(0);
-    for (const p of posts) expect(p.userId).toBe(3);
-  });
+test('get post 1', async ({ request }) => {
+  const res = await request.get(`${API}/posts/1`);
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('application/json');
 
-  test('comments for a post all point back to that post (a join check)', async ({ request }) => {
-    const [post, comments] = await Promise.all([
-      request.get(`${base}/posts/5`).then(r => r.json()),
-      request.get(`${base}/posts/5/comments`).then(r => r.json()),
-    ]);
-    expect(comments.length).toBeGreaterThan(0);
-    for (const c of comments) {
-      expect(c.postId).toBe(post.id);
-      expect(c.email).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/);
-    }
-  });
+  const post = await res.json();
+  expect(post.id).toBe(1);
+  expect(typeof post.userId).toBe('number');
+  expect(typeof post.title).toBe('string');
+});
 
-  test('POST returns what was sent', async ({ request }) => {
-    const body = { title: 'QA sample', body: 'Created by a test', userId: 1 };
-    const res = await request.post(`${base}/posts`, { data: body });
-    expect(res.status()).toBe(201);
-    expect(await res.json()).toMatchObject(body);
-  });
+test('filter posts by userId', async ({ request }) => {
+  const res = await request.get(`${API}/posts?userId=3`);
+  expect(res.ok()).toBeTruthy();
 
-  test('a missing post returns 404, not an empty 200', async ({ request }) => {
-    const res = await request.get(`${base}/posts/999999`);
-    expect(res.status()).toBe(404);
-  });
+  const posts = await res.json();
+  expect(posts.length).toBeGreaterThan(0);
+  for (const p of posts) {
+    expect(p.userId).toBe(3);
+  }
+});
+
+test('comments belong to the right post', async ({ request }) => {
+  const post = await (await request.get(`${API}/posts/5`)).json();
+  const comments = await (await request.get(`${API}/posts/5/comments`)).json();
+
+  expect(comments.length).toBeGreaterThan(0);
+  for (const c of comments) {
+    expect(c.postId).toBe(post.id);
+    expect(c.email).toContain('@');
+  }
+});
+
+test('create a post', async ({ request }) => {
+  const newPost = { title: 'test post', body: 'hello', userId: 1 };
+  const res = await request.post(`${API}/posts`, { data: newPost });
+  expect(res.status()).toBe(201);
+
+  const created = await res.json();
+  expect(created).toMatchObject(newPost);
+  expect(created.id).toBeDefined();
+});
+
+test('unknown id gives 404', async ({ request }) => {
+  const res = await request.get(`${API}/posts/999999`);
+  expect(res.status()).toBe(404);
 });

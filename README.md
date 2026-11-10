@@ -1,33 +1,26 @@
-# Playwright QA sample
+# playwright-qa-sample
 
-A small test suite that shows how I test a web app and an API.
+Playwright tests I wrote for practice, against two public demo sites:
 
-## What it covers
+- the Playwright TodoMVC demo (UI, run on desktop Chrome and a Pixel 7 viewport)
+- JSONPlaceholder (REST API)
 
-**UI tests** (`tests/todo.spec.ts`) on the public Playwright TodoMVC demo, at desktop and phone width:
-- adding items and checking the counter
-- input edge cases: extra spaces and empty input
-- completing items and checking the Active and Completed filters
-- data surviving a page reload
-- editing an item to empty removes it
-- every test also fails if the page logs a console error, because a page can look fine and still be broken
+My work code is under NDA, so I can't put it on GitHub. This is roughly how I set things up there, just pointed at public sites.
 
-**API tests** (`tests/api.spec.ts`) on the public JSONPlaceholder API:
-- status code, headers and response shape
-- a filtered list only returns matching records
-- related records point back to their parent (the same idea as checking a SQL join)
-- POST returns what was sent
-- a missing record returns 404, not an empty success
+A few things I always add:
 
-The UI tests use a small page object (`tests/todo.pages.ts`) so each test reads like a test case.
+- the UI tests fail if the page logs a console error. A page can look fine while something underneath is throwing
+- for the API I check the negative cases too, e.g. an id that doesn't exist should come back 404, not 200 with an empty body
+- the comments test is basically a join check: every comment has to point back to the post I asked for
 
-## Run it
+## Running it
 
 ```
 npm install
 npx playwright install chromium
-npm test
-npm run report
+npx playwright test
 ```
 
-For each failed test Playwright keeps a screenshot and a trace.
+HTML report after a run: `npx playwright show-report`
+
+Only the UI tests run on the mobile project, the API ones are skipped there since they don't use a browser.
