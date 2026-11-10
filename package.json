@@ -1,0 +1,16 @@
+{
+  "name": "playwright-qa-sample",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small Playwright sample: UI tests, API tests and console checks",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test tests/todo.spec.ts",
+    "test:api": "playwright test tests/api.spec.ts",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.0.0"
+  }
+}
